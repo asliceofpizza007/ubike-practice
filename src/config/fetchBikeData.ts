@@ -25,7 +25,7 @@ export type UBikeInfo = {
   stationName: string // 站點名稱 (sna)
 }
 
-export default async function fetchBikeData () {
+export default async function fetchBikeData (): Promise<UBikeInfo[]> {
   const url = 'https://tcgbusfs.blob.core.windows.net/blobyoubike/YouBikeTP.json'
   const res = await fetch(url)
   const { retVal } = await res.json()
