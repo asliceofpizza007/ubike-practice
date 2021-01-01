@@ -25,10 +25,10 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, ref } from 'vue'
-import L, { LayerGroup, icon, Map } from 'leaflet'
+import L, { LayerGroup, icon, Map, LatLngExpression } from 'leaflet'
 import mapConfig from '@/config/map.config'
 import fetchBikeData from '@/config/fetchBikeData'
-import { districts } from '@/config/districtData'
+import { districts, districtLatLngMap } from '@/config/districtData'
 
 export default defineComponent({
   name: 'Map',
@@ -75,7 +75,12 @@ export default defineComponent({
       })
       markerLayer = L.layerGroup(markers)
       markerLayer.addTo(map)
-      map.flyTo(selectedData[0].latLng)
+      const tmp = districtLatLngMap.get(currentDistrict.value)
+      let latLng: LatLngExpression
+      if (tmp !== undefined) {
+        latLng = tmp
+        map.flyTo(latLng)
+      }
     }
 
     onMounted(() => {
