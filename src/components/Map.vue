@@ -75,6 +75,7 @@ export default defineComponent({
       })
       markerLayer = L.layerGroup(markers)
       markerLayer.addTo(map)
+      map.flyTo(selectedData[0].latLng)
     }
 
     onMounted(() => {
