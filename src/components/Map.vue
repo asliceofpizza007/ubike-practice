@@ -1,6 +1,9 @@
 <template>
   <div class="map-wrapper">
-    <div id="map" />
+    <div
+      id="map"
+      ref="map"
+    />
     <div class="input-wrapper">
       <label for="district">
         選擇行政區
@@ -25,18 +28,19 @@
 
 <script lang="ts">
 import { defineComponent, onMounted, ref } from 'vue'
-import L, { LayerGroup, icon, Map, LatLngExpression } from 'leaflet'
+import { LatLngExpression } from 'leaflet'
 import mapConfig from '@/config/map.config'
-import fetchBikeData from '@/config/fetchBikeData'
+import fetchBikeData, { UBikeInfo } from '@/config/fetchBikeData'
 import { districts, districtLatLngMap } from '@/config/districtData'
+import UbikeMapFacade from '@/ubikeMap/UbikeMapFacade'
 
 export default defineComponent({
   name: 'Map',
   setup () {
     const currentDistrict = ref(districts[0])
     const districtsInfo = ref(districts)
-    let markerLayer: LayerGroup
-    let map: Map
+    const map = ref(null as HTMLElement | null)
+    let mapFacade: UbikeMapFacade
 
     const updateUBikeMap = async () => {
       const data = await fetchBikeData()
@@ -44,63 +48,43 @@ export default defineComponent({
         return info.regionName === currentDistrict.value
       })
 
-      const markers = selectedData.map(data => {
-        const {
-          latLng,
-          regionName,
-          stationName,
-          totalBikes,
-          availableBikes
-        } = data
-        const marker = new L.Marker(latLng, {
-          icon: icon({
-            iconSize: [25, 41],
-            iconAnchor: [13, 41],
-            iconUrl: require('@img/bicycle-rider.png')
-          })
-        })
-        marker.bindTooltip(`
-          <p>${regionName} - ${stationName}</p>
-          <p>總車輛數： ${totalBikes}</p>
-          <p>可使用車輛數： ${availableBikes}</p>
-        `)
+      mapFacade.pinStations(selectedData)
 
-        marker.on('mouseover', () => {
-          marker.openTooltip()
-        })
-        marker.on('mouseout', () => {
-          marker.closeTooltip()
-        })
-        return marker
-      })
-      markerLayer = L.layerGroup(markers)
-      markerLayer.addTo(map)
       const tmp = districtLatLngMap.get(currentDistrict.value)
       let latLng: LatLngExpression
       if (tmp !== undefined) {
         latLng = tmp
-        map.flyTo(latLng)
+        mapFacade.flyTo(latLng)
       }
     }
 
     onMounted(() => {
-      const {
-        coordinate,
-        zoomLv,
-        tileLayerURL,
-        containerID
-      } = mapConfig
-      map = L.map(containerID)
-      map.setView(coordinate, zoomLv)
-      L.tileLayer(tileLayerURL).addTo(map)
+      mapFacade = new UbikeMapFacade(
+        mapConfig,
+        map.value,
+        function (info: UBikeInfo) {
+          const {
+            regionName,
+            stationName,
+            totalBikes,
+            availableBikes
+          } = info
+          return `
+            <p>${regionName} - ${stationName}</p>
+            <p>總車輛數： ${totalBikes}</p>
+            <p>可使用車輛數： ${availableBikes}</p>
+          `
+        }
+      )
       updateUBikeMap()
     })
 
     const onChange = async () => {
-      markerLayer.remove()
+      mapFacade.clearStations()
       updateUBikeMap()
     }
     return {
+      map,
       currentDistrict,
       districtsInfo,
       onChange
